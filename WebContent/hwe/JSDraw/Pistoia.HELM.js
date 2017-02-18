@@ -969,7 +969,7 @@ org.helm.webeditor.Monomers = {
         for (var i = 1; i <= 5; ++i) {
             var s2 = s.replace(new RegExp("\\[R" + i + "\\]"), "");
             if (s2.length == s.length)
-                break;
+                continue;
             s = s2;
             ret.push("R" + i);
         }
@@ -979,7 +979,7 @@ org.helm.webeditor.Monomers = {
             for (var i = 1; i <= 5; ++i) {
                 var s2 = s.replace(new RegExp("_R" + i), "");
                 if (s2.length == s.length)
-                    break;
+                    continue;
                 s = s2;
                 ret.push("R" + i);
             }
@@ -3689,7 +3689,7 @@ org.helm.webeditor.IO = {
                 s = a.elem;
         }
 
-        if (s == "?")
+        if (s == "?" && a.bio != null)
             s = a.bio.ambiguity;
         else if (s.length > 1)
             s = "[" + s + "]";
@@ -4784,7 +4784,7 @@ org.helm.webeditor.MonomerExplorer = scil.extend(scil._base, {
 
             var tabs = [
                     { caption: this.createRNATabCaption("nucleotide", "R(A)P"), tabkey: "nucleotide", onmenu: this.options.mexrnapinontab ? function (e) { me.onPinMenu(e); } : null },
-                    { caption:this.createRNATabCaption("base", base), tabkey: "base" },
+                    { caption: this.createRNATabCaption("base", base), tabkey: "base" },
                     { caption: this.createRNATabCaption("sugar", sugar), tabkey: "sugar" },
                     { caption: this.createRNATabCaption("linker", linker), tabkey: "linker" }
                 ];
@@ -5087,6 +5087,11 @@ org.helm.webeditor.MonomerExplorer = scil.extend(scil._base, {
                     return;
 
                 me.dnd.floatingbox.style.display = "none";
+
+                var src = e.target || e.srcElement;
+                if (!scil.Utils.hasAnsestor(src, me.plugin.jsd.div))
+                    return;
+
                 var type = me.dnd.floatingbox.getAttribute("helm");
                 me.plugin.dropMonomer(type, scil.Utils.getInnerText(me.dnd.floatingbox), e);
             },
@@ -5796,6 +5801,9 @@ org.helm.webeditor.Formula = {
     * @function countMonomer
     */
     countMonomer: function (ret, m) {
+        if (m == null)
+            return;
+
         if (m.stats == null) {
             m.stats = org.helm.webeditor.Interface.molStats(org.helm.webeditor.monomers.getMolfile(m));
             for (var r in m.at) {

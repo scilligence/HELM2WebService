@@ -21,6 +21,12 @@
  * SOFTWARE.
  * ****************************************************************************
  */
+
+/**
+ *
+ * @author tony yuan at Scilligence
+ * 
+ */
 package org.helm.rest;
 
 import java.io.BufferedReader;
@@ -52,34 +58,36 @@ import org.apache.commons.io.IOUtils;
 import org.apache.commons.lang.StringUtils;
 import org.helm.chemtoolkit.AbstractChemistryManipulator;
 import org.helm.notation2.*;
+import org.apache.commons.codec.binary.Base64;
+import org.apache.commons.lang.StringUtils;
+import com.mysql.jdbc.Connection;
 
 @Path("/ajaxtool")
 public class AjaxTool {
-
-    private static final String DEFAULT_HELM_DIR = System.getProperty("catalina.base") + 
-            System.getProperty("file.separator") + "webapps" + 
-            System.getProperty("file.separator") + "WebService" + 
-            System.getProperty("file.separator") + "hwe" +
-            System.getProperty("file.separator") + "db";
-    //private static final String DEFAULT_HELM_DIR = System.getProperty("user.home") + System.getProperty("file.separator") + ".helm"; // 
-    private static final String DEFAULT_MONOMERS_FILE_NAME = "monomers.txt";
-    private static final String DEFAULT_RULES_FILE_NAME = "rules.txt";
-
-    Database monomers = null;
-    Database rules = null;
-
+    Database db = null;
+    
     @GET
     @Consumes({MediaType.APPLICATION_JSON, MediaType.APPLICATION_FORM_URLENCODED, MediaType.TEXT_HTML,
         MediaType.TEXT_PLAIN, MediaType.MULTIPART_FORM_DATA})
     @Produces({MediaType.TEXT_PLAIN, MediaType.APPLICATION_JSON})
     @Path("/get")
     public Response CmdGet(@Context HttpServletRequest request) {
+        db = new Database();
+        Response  ret = null;
+        if (!db.IsOpen()) {
+            ret = Response.status(Response.Status.OK).entity(wrapAjaxError("ERROR: " + (db.error == null ? "" : db.error.getMessage()))).build();
+            return ret;
+        }
+        
         Map<String, String> args = getQueryParameters(request);
         try {
-            return OnCmd(args.get("cmd"), args, request);
+            ret = OnCmd(args.get("cmd"), args, request);
         } catch (Exception e) {
-            return Response.status(Response.Status.OK).entity(wrapAjaxError("ERROR: " + e.getMessage() + ", " + GetTrace(e))).build();
+            ret = Response.status(Response.Status.OK).entity(wrapAjaxError("ERROR: " + e.getMessage() + ", " + GetTrace(e))).build();
         }
+        
+        db.Close();
+        return ret;
     }
 
     @POST
@@ -88,13 +96,23 @@ public class AjaxTool {
     @Produces({MediaType.TEXT_PLAIN, MediaType.TEXT_HTML, MediaType.APPLICATION_JSON})
     @Path("/post")
     public Response CmdPost(@Context HttpServletRequest request) {
+        db = new Database();        
+        Response ret = null;
+        if (!db.IsOpen()) {
+            ret = Response.status(Response.Status.OK).entity(wrapAjaxError("ERROR: " + (db.error == null ? "" : db.error.getMessage()))).build();
+            return ret;
+        }
+
         String cmd = getQueryParameters(request).get("cmd");
         Map<String, String> args = cmd.equals("openjsd") ? null : getFormParameters(request);
         try {
-            return OnCmd(cmd, args, request);
+            ret = OnCmd(cmd, args, request);
         } catch (Exception e) {
-            return Response.status(Response.Status.OK).entity(wrapAjaxError("ERROR: " + e.getMessage() + ", " + GetTrace(e))).build();
+            ret = Response.status(Response.Status.OK).entity(wrapAjaxError("ERROR: " + e.getMessage() + ", " + GetTrace(e))).build();
         }
+        
+        db.Close();
+        return ret;
     }
 
     Response OnCmd(String cmd, Map<String, String> items, HttpServletRequest request) throws Exception {
@@ -112,123 +130,79 @@ public class AjaxTool {
             }
             
             case "helm.monomer.del":
-                LoadRules();
-                ret = monomers.DelRecord(items.get("id"));
-                if (ret != null) {
-                    try {
-                        monomers.Save();
-                    } catch (Exception e) {
-                        throw e;
-                    }
-                }
+                ret = db.DelRecord("HelmMonomers", "ID=" + items.get("id"));
                 break;
             case "helm.monomer.load":
-                LoadMonomers();
-                ret = monomers.LoadRow(items.get("id"));
+                ret = db.LoadMonomer(ToLong(items.get("id")));
                 break;
             case "helm.monomer.save": {
-                LoadMonomers();
-                String[] keys = monomers.getKeys();
-                String[] row = new String[keys.length];
-                for (int i = 0; i < keys.length; ++i) {
-                    row[i] = items.get(keys[i]);
-                }
-
-                ret = monomers.SaveRecord(row);
-                if (ret != null) {
-                    try {
-                        monomers.Save();
-                    } catch (Exception e) {
-                        throw e;
-                    }
-                }
+                Map<String, String> data = SelectData(items, "id,symbol,name,naturalanalog,molfile,smiles,polymertype,monomertype,r1,r2,r3,r4,r5,author".split(","));
+                long id = ToLong(data.get("id"));
+                String symbol = data.get("symbol");
+                long tid = db.SelectID("select ID from HelmMonomers where Symbol=" + Database.SqlSafe(symbol));
+                if (tid > 0 && tid != id)
+                    throw new Exception("This symbol is used: " + symbol);
+                id = db.SaveRecord("HelmMonomers", id, data);
+                if (id > 0)
+                    ret = db.ListMonomers(0, 0, id, null, null, null);
             }
             break;
             case "helm.monomer.suggest":
                 break;
             case "helm.monomer.list": {
-                LoadMonomers();
                 int page = ToInt(items.get("page"));
                 int countperpage = ToInt(items.get("countperpage"));
                 String polymertype = items.get("polymertype");
                 String monomertype = items.get("monomertype");
                 String symbol = items.get("symbol");
-                ret = monomers.List(page, countperpage, "polymertype", polymertype, "monomertype", monomertype, "symbol", symbol);
+                ret = db.ListMonomers(page, countperpage, 0, polymertype, monomertype, symbol);
             }
             break;
             case "helm.monomer.all": {
-                LoadMonomers();
-                ret.put("monomers", monomers.AsJSON());
+                ret.put("monomers", db.ReadAsJson("select * from HelmMonomers"));
             }            
             break;
             case "helm.monomer.json": {
-                LoadMonomers();
-                ArrayList<JSONObject> ret2 = monomers.AsJSON();
+                ArrayList<JSONObject> ret2 = db.ReadAsJson("select * from HelmMonomers");
                 ret.put("list", ret2);
             }
             break;
             case "helm.monomer.downloadjson": {
-                LoadMonomers();
-                ArrayList<JSONObject> ret2 = monomers.AsJSON();
+                ArrayList<JSONObject> ret2 = db.ReadAsJson("select * from HelmMonomers");
                 String s = "org.helm.webeditor.Monomers.loadDB(" + ret2.toString() + ");";
                 return Response.status(Response.Status.OK).entity(s).build();
             }
-            case "helm.monomer.filelocation": {
-                ret = new JSONObject();
-                ret.put("momomers", DEFAULT_HELM_DIR + System.getProperty("file.separator") + DEFAULT_MONOMERS_FILE_NAME);
-            }
-            break;
+            case "helm.monomer.importfromtoolkit":
+                ret = ImportFromToolkit();
+                break;
 
             case "helm.rule.del":
-                LoadRules();
-                ret = rules.DelRecord(items.get("id"));
-                if (ret != null) {
-                    try {
-                        rules.Save();
-                    } catch (Exception e) {
-                        throw e;
-                    }
-                }
+                ret = db.DelRecord("HelmRules", "ID=" + items.get("id"));
                 break;
             case "helm.rule.load":
-                LoadRules();
-                ret = rules.LoadRow(items.get("id"));
+                ret = db.LoadRule(ToLong(items.get("id")));
                 break;
             case "helm.rule.save": {
-                LoadRules();
-                String[] keys = rules.getKeys();
-                String[] row = new String[keys.length];
-                for (int i = 0; i < keys.length; ++i) {
-                    row[i] = items.get(keys[i]);
-                }
-
-                ret = rules.SaveRecord(row);
-                if (ret != null) {
-                    try {
-                        rules.Save();
-                    } catch (Exception e) {
-                        throw e;
-                    }
-                }
+                Map<String, String> data = SelectData(items, "id,category,name,description,script,author".split(","));
+                long id = db.SaveRecord("HelmRules", ToLong(data.get("id")), data);
+                if (id > 0)
+                    ret = db.ListRules(0, 0, id, null);
             }
             break;
             case "helm.rule.list": {
-                LoadRules();
                 int page = ToInt(items.get("page"));
                 int countperpage = ToInt(items.get("countperpage"));
                 String category = items.get("category");
-                ret = rules.List(page, countperpage, "category", category, null, null, null, null);
+                ret = db.ListRules(page, countperpage, 0, category);
             }
             break;
             case "helm.rule.all": {
-                LoadRules();
-                ret.put("rules", rules.AsJSON());
+                ret.put("rules", db.ReadAsJson("select * from HelmRules"));
             }
             break;
             case "helm.rule.downloadjson":
             case "helm.rules.downloadjson": {
-                LoadRules();
-                ArrayList<JSONObject> ret2 = rules.AsJSON();
+                ArrayList<JSONObject> ret2 = db.ReadAsJson("select * from HelmRules");
                 String s = "org.helm.webeditor.RuleSet.loadDB(" + ret2.toString() + ");";
                 return Response.status(Response.Status.OK).entity(s).build();
             }
@@ -239,7 +213,7 @@ public class AjaxTool {
                 String filename = getFileName(part);
                 String contents = getValue(part);
                 ret.put("filename", filename);
-                ret.put("base64", Database.EncodeBase64(contents));
+                ret.put("base64", EncodeBase64(contents));
                 String s = "<html><head></head><body><textarea>" + wrapAjaxResult(ret) + "</textarea></body></html>";
                 return Response.status(Response.Status.OK).entity(s).type("text/html").build();
             }
@@ -262,8 +236,50 @@ public class AjaxTool {
             default:
                 return Response.status(Response.Status.OK).entity(wrapAjaxError("Unknown cmd: " + cmd)).build();
         }
-
+        
+        if (db != null && db.error != null) {
+            if (ret == null)
+                ret = new JSONObject();
+            ret.put("dberror", db.error.getMessage());
+        }
         return Response.status(Response.Status.OK).entity(wrapAjaxResult(ret)).build();
+    }
+    
+    Map<String, String> SelectData(Map<String, String> items, String[] keys) {
+        Map<String, String> ret = new HashMap<>();
+        for (String k : keys) {
+            if (items.containsKey(k))
+                ret.put(k, items.get(k));
+            else
+                ret.put(k, null);
+        }
+        return ret;
+    }
+    
+    JSONObject ImportFromToolkit() {
+        int n = 0;
+        try {
+            //get monomer database via MonomerFacotry Singleton class
+            Map<String, Map<String, Monomer>> allMonomers = MonomerFactory.getInstance().getMonomerDB();
+
+            //loop through polymer type and monomer to build the JSON string
+            Set<String> polymerTypes = allMonomers.keySet();
+            for (String polymerType : polymerTypes) {
+                //momomers for specific polymerType
+                Map<String, Monomer> monomers = allMonomers.get(polymerType);
+                Set<String> monomerIds = monomers.keySet();
+                for (String monomerId : monomerIds) {
+                    Monomer monomer = monomers.get(monomerId);
+                    if (saveMonomer(monomer) > 0)
+                        ++n;
+                }
+            }
+        } catch (Exception e) {
+        }    
+        
+        JSONObject ret = new JSONObject();
+        ret.put("msg", n + " records imported");
+        return ret;
     }
     
     ArrayList<JSONObject> getToolkitMonomers(){
@@ -290,6 +306,44 @@ public class AjaxTool {
         return ret;
     }
     
+    public static String EncodeBase64(String s) {
+        if (s == null)
+            return null;
+        byte[] encodedBytes = Base64.encodeBase64(s.getBytes());
+        return new String(encodedBytes);
+    }
+    
+    public static String DecodeBase64(String s) {
+        if (s == null)
+            return null;
+        byte[] decodedBytes = Base64.decodeBase64(s);
+        return new String(decodedBytes);
+    }
+    
+    long saveMonomer(Monomer m) {
+        String symbol = m.getAlternateId();
+        String sql = "select ID from HelmMonomers where upper(symbol)=" + Database.SqlSafe(symbol);
+        if (db.SelectID(sql) > 0)
+            return 0;
+        
+        Map<String, String> ret = new HashMap();
+        ret.put("symbol", symbol);
+        ret.put("name", m.getName());
+        ret.put("naturalanalog", m.getNaturalAnalog());
+        ret.put("molfile", m.getMolfile());
+        ret.put("smiles", m.getCanSMILES());
+        ret.put("polymertype", m.getPolymerType());
+        ret.put("monomertype", m.getMonomerType());
+        
+        List<Attachment> al = m.getAttachmentList();
+        List<String> l = new ArrayList();
+        for (Attachment a : al) {
+            String r = a.getLabel();
+            ret.put(r, a.getCapGroupName());
+        }
+        return db.SaveRecord("HelmMonomers", 0, ret);
+    }
+    
     JSONObject monomer2Json(Monomer m) {
         JSONObject ret = new JSONObject();
         ret.put("id", m.getId());
@@ -309,17 +363,6 @@ public class AjaxTool {
         return ret;
     }
     
-    private String getFileName(final Part part) {
-        final String partHeader = part.getHeader("content-disposition");
-        for (String content : part.getHeader("content-disposition").split(";")) {
-            if (content.trim().startsWith("filename")) {
-                return content.substring(
-                        content.indexOf('=') + 1).trim().replace("\"", "");
-            }
-        }
-        return null;
-    }
-
     static JSONObject Cleanup(String q, String inputformat) {
         if (StringUtils.isEmpty(q)) {
             return null;
@@ -387,60 +430,6 @@ public class AjaxTool {
         return s;
     }
 
-    void LoadMonomers() {
-        if (monomers == null) {
-            String[] cols = {"id", "symbol", "name", "naturalanalog", "molfile", "smiles", "polymertype", "monomertype", "r1", "r2", "r3", "r4", "r5", "author", "createddate"};
-            seedDatabase(DEFAULT_MONOMERS_FILE_NAME);
-            monomers = new Database(DEFAULT_HELM_DIR + System.getProperty("file.separator") + DEFAULT_MONOMERS_FILE_NAME, cols);
-        }
-    }
-
-    void LoadRules() {
-        if (rules == null) {
-            String[] cols = {"id", "name", "description", "script", "author", "category" };
-            seedDatabase(DEFAULT_RULES_FILE_NAME);
-            rules = new Database(DEFAULT_HELM_DIR + System.getProperty("file.separator") + DEFAULT_RULES_FILE_NAME, cols);
-        }
-    }
-
-    void seedDatabase(String fileName) {
-        File f = new File(DEFAULT_HELM_DIR + System.getProperty("file.separator") + fileName);
-        BufferedReader reader = null;
-        BufferedWriter writer = null;
-        if (!f.exists()) {
-            try {
-                File dir = new File(DEFAULT_HELM_DIR);
-                if (!dir.exists()) {
-                    dir.mkdir();
-                }
-
-                f.createNewFile();
-                InputStream in = AjaxTool.class.getResourceAsStream("/" + fileName);
-                reader = new BufferedReader(new InputStreamReader(in));
-                writer = new BufferedWriter(new FileWriter(f));
-
-                String line;
-                while ((line = reader.readLine()) != null) {
-                    writer.write(line + System.getProperty("line.separator"));
-                }
-            } catch (IOException ex) {
-                Logger.getLogger(AjaxTool.class.getName()).log(Level.SEVERE, null, ex);
-            } finally {
-                try {
-                    if (null != reader) {
-                        reader.close();
-                    }
-                    if (null != writer) {
-                        writer.close();
-                    }
-                } catch (Exception e) {
-
-                }
-
-            }
-        }
-    }
-
     Map<String, String> getFormParameters(HttpServletRequest request) {
         Map<String, String> dict = new HashMap<>();
         Map<String, String> ret = new HashMap<>();
@@ -461,7 +450,18 @@ public class AjaxTool {
 
         return ret;
     }
-
+    
+    private String getFileName(final Part part) {
+        final String partHeader = part.getHeader("content-disposition");
+        for (String content : part.getHeader("content-disposition").split(";")) {
+            if (content.trim().startsWith("filename")) {
+                return content.substring(
+                        content.indexOf('=') + 1).trim().replace("\"", "");
+            }
+        }
+        return null;
+    }
+    
     Map<String, String> getQueryParameters(HttpServletRequest request) {
         String queryString = request.getQueryString();
         return parseQueryString(queryString);
@@ -499,6 +499,17 @@ public class AjaxTool {
         }
     }
 
+    static long ToLong(String s) {
+        try {
+            if (s == null || s.length() == 0) {
+                return 0;
+            }
+            return Long.parseLong(s);
+        } catch (Exception e) {
+            return 0;
+        }
+    }
+    
     // tool function to wrap HELM Editor acceptable json results
     public static String wrapAjaxResult(JSONObject ret) {
         JSONObject json = new JSONObject();

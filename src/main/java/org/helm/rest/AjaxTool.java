@@ -74,10 +74,10 @@ public class AjaxTool {
     public Response CmdGet(@Context HttpServletRequest request) {
         db = new Database();
         Response  ret = null;
-        if (!db.IsOpen()) {
-            ret = Response.status(Response.Status.OK).entity(wrapAjaxError("ERROR: " + (db.error == null ? "" : db.error.getMessage()))).build();
-            return ret;
-        }
+        //if (!db.IsOpen()) {
+        //    ret = Response.status(Response.Status.OK).entity(wrapAjaxError("ERROR: " + (db.error == null ? "" : db.error.getMessage()))).build();
+        //    return ret;
+        //}
         
         Map<String, String> args = getQueryParameters(request);
         try {
@@ -98,10 +98,10 @@ public class AjaxTool {
     public Response CmdPost(@Context HttpServletRequest request) {
         db = new Database();        
         Response ret = null;
-        if (!db.IsOpen()) {
-            ret = Response.status(Response.Status.OK).entity(wrapAjaxError("ERROR: " + (db.error == null ? "" : db.error.getMessage()))).build();
-            return ret;
-        }
+        //if (!db.IsOpen()) {
+        //    ret = Response.status(Response.Status.OK).entity(wrapAjaxError("ERROR: " + (db.error == null ? "" : db.error.getMessage()))).build();
+        //    return ret;
+        //}
 
         String cmd = getQueryParameters(request).get("cmd");
         Map<String, String> args = cmd.equals("openjsd") ? null : getFormParameters(request);

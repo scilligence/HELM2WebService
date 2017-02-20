@@ -139,7 +139,7 @@ public class Database {
         if (category != null && category.length() > 0)
             where += " and category=" + SqlSafe(category);
 
-        String sql = "ID, category, name, description, author, CreatedDate" +
+        String sql = "select ID, category, name, description, author, CreatedDate" +
                 " from HelmRules" + 
                 " where " + where +
                 " order by name";
@@ -155,7 +155,7 @@ public class Database {
         if (symbol != null && symbol.length() > 0)
             where += " and (Symbol like " + SqlSafe(symbol + "%") + " or Name like " + SqlSafe(symbol + "%") + ")";
         
-        String sql = "SELECT ID, Symbol, Name, NaturalAnalog, PolymerType, MonomerType, Author, CreatedDate, Status, R1, R2, R3, R4, R5" +
+        String sql = "select ID, Symbol, Name, NaturalAnalog, PolymerType, MonomerType, Author, CreatedDate, Status, R1, R2, R3, R4, R5" +
                 " from HelmMonomers" + 
                 " where " + where +
                 " order by Symbol";
@@ -163,7 +163,9 @@ public class Database {
     }
     
     public JSONObject LoadRule(long id) {
-        String sql = "";
+        String sql = "select ID, category, name, script, description, author, CreatedDate" +
+                " from HelmRules" + 
+                " where ID=" + id;        
         return LoadRow(sql);
     }
     

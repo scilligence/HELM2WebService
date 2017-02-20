@@ -49,6 +49,8 @@
       }
         
       scil.ready(function () {
+        JSDraw2.defaultoptions = {skin: "w8" };
+          
         new scil.helm.AppToolbar("toolbar", "../JSDraw/helm/img/",
         [{ icon: "canvas-2.png", label: "Canvas", url: "App.htm" }, { icon: "monomers-1.png", label: "Monomer Library" }, { icon: "settings-2.png", label: "Ruleset", url: "RuleSetApp.htm" }]
         );

@@ -170,7 +170,7 @@ public class Database {
     }
     
     public JSONObject LoadMonomer(long id) {
-        String sql = "SELECT ID, Symbol, Name, NaturalAnalog, PolymerType, MonomerType, Author, CreatedDate, Status, R1, R2, R3, R4, R5, Molfile" +
+        String sql = "SELECT ID, Symbol, Name, SMILES, NaturalAnalog, PolymerType, MonomerType, Author, CreatedDate, Status, R1, R2, R3, R4, R5, Molfile" +
             " from HelmMonomers" + 
             " where ID=" + id;
         return LoadRow(sql);

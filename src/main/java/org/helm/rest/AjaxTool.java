@@ -164,7 +164,7 @@ public class AjaxTool {
             break;
             case "helm.monomer.json": {
                 ArrayList<JSONObject> ret2 = db.ReadAsJson("select * from HelmMonomers");
-                ret.put("list", ret2);
+                ret.put("monomers", ret2);
             }
             break;
             case "helm.monomer.downloadjson": {
@@ -206,6 +206,11 @@ public class AjaxTool {
                 String s = "org.helm.webeditor.RuleSet.loadDB(" + ret2.toString() + ");";
                 return Response.status(Response.Status.OK).entity(s).build();
             }
+            case "helm.rule.json": {
+                ArrayList<JSONObject> ret2 = db.ReadAsJson("select * from HelmRules");
+                ret.put("rules", ret2);
+            }
+            break;
 
             case "openjsd": {
                 ret = new JSONObject();

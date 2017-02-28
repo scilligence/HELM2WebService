@@ -238,6 +238,54 @@ public class Database {
         return ResultSet2Json(rs);      
     }
     
+    public String ReadAsSDF(String sql, String molfile) {
+        try {
+            stmt = conn.createStatement();
+            rs = stmt.executeQuery(sql);
+        }
+        catch (Exception e) {
+            error = e;
+            return null;
+        }    
+             
+        String lb = System.getProperty("line.separator");
+        molfile = molfile.toLowerCase();
+        StringBuilder sb = new StringBuilder();
+        try {
+            ResultSetMetaData meta = rs.getMetaData();
+            int n = meta.getColumnCount();
+            while (rs.next()) {
+                String m = rs.getString(molfile);
+                sb.append(m);
+                sb.append(lb);
+                for (int i = 0; i < n; ++i) {
+                    String k2 = meta.getColumnName(i + 1);
+                    String k = k2.toLowerCase();
+                    if (k.equals(molfile))
+                        continue;
+                    
+                    sb.append("> <");
+                    sb.append(k2);
+                    sb.append(">");
+                    sb.append(lb);
+                    
+                    sb.append(rs.getString(i + 1));
+                    sb.append(lb);
+                    
+                    sb.append(lb);
+                }                
+                    
+                sb.append("$$$$");
+                sb.append(lb);                    
+            }
+        }
+        catch (Exception e) {
+            error = e;
+            return null;
+        }
+        return sb.toString();
+    }
+    
     ArrayList<JSONObject> ResultSet2Json(ResultSet rs) { 
         ArrayList<JSONObject> list = new ArrayList();
         try {

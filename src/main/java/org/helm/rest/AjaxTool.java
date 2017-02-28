@@ -167,6 +167,22 @@ public class AjaxTool {
                 ret.put("monomers", ret2);
             }
             break;
+            case "helm.monomer.savefile": {
+                String ext = items.get("ext");
+                if (ext != null)
+                    ext = ext.toLowerCase();
+                if (ext == null || !ext.equals("sdf") && !ext.equals("json"))
+                    ext = "json";
+                String contents;
+                if (ext.equals("json"))
+                    contents = db.ReadAsJson("select * from HelmMonomers").toString();
+                else
+                    contents = db.ReadAsSDF("select * from HelmMonomers", "Molfile");
+                return Response
+                        .ok(contents, "application/unknown")
+                        .header("content-disposition", "attachment;filename=Monomers." + ext)
+                        .build();
+            }
             case "helm.monomer.downloadjson": {
                 ArrayList<JSONObject> ret2 = db.ReadAsJson("select * from HelmMonomers");
                 String s = "org.helm.webeditor.Monomers.loadDB(" + ret2.toString() + ");";

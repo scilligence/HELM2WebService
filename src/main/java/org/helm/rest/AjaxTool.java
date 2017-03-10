@@ -65,6 +65,7 @@ import com.mysql.jdbc.Connection;
 @Path("/ajaxtool")
 public class AjaxTool {
     Database db = null;
+    static org.helm.chemtoolkit.cdk.CDKManipulator cdk = null;
     
     @GET
     @Consumes({MediaType.APPLICATION_JSON, MediaType.APPLICATION_FORM_URLENCODED, MediaType.TEXT_HTML,
@@ -138,10 +139,7 @@ public class AjaxTool {
             case "helm.monomer.save": {
                 Map<String, String> data = SelectData(items, "id,symbol,name,naturalanalog,molfile,smiles,polymertype,monomertype,r1,r2,r3,r4,r5,author".split(","));
                 long id = ToLong(data.get("id"));
-                String symbol = data.get("symbol");
-                long tid = db.SelectID("select ID from HelmMonomers where Symbol=" + Database.SqlSafe(symbol));
-                if (tid > 0 && tid != id)
-                    throw new Exception("This symbol is used: " + symbol);
+                CheckMonomerUniqueness(id, data);
                 id = db.SaveRecord("HelmMonomers", id, data);
                 if (id > 0)
                     ret = db.ListMonomers(0, 0, id, null, null, null);
@@ -190,6 +188,9 @@ public class AjaxTool {
             }
             case "helm.monomer.importfromtoolkit":
                 ret = ImportFromToolkit();
+                break;
+            case "helm.monomer.updatehashcode":
+                ret = UpdateHashcode();
                 break;
 
             case "helm.rule.del":
@@ -264,6 +265,52 @@ public class AjaxTool {
             ret.put("dberror", db.error.getMessage());
         }
         return Response.status(Response.Status.OK).entity(wrapAjaxResult(ret)).build();
+    }
+    
+    void CheckMonomerUniqueness(long id, Map<String, String> data) throws Exception {
+        // check duplicated symbol
+        String symbol = data.get("symbol");
+        long tid = db.SelectID("select ID from HelmMonomers where Symbol=" + Database.SqlSafe(symbol));
+        if (tid > 0 && tid != id)
+            throw new Exception("This symbol is used: " + symbol);
+
+        // check duplicated structure
+        String molfile = data.get("molfile");
+        String hashcode = CalcHashcode(molfile);
+        tid = db.SelectID("select ID from HelmMonomers where Hashcode=" + Database.SqlSafe(hashcode));
+        if (tid > 0 && tid != id)
+            throw new Exception("Duplicated structure: " + symbol);
+        
+        data.put("hashcode", hashcode);
+    }
+    
+    String CalcHashcode(String molfile)
+    {
+        // this is one example implementation, using CDK canonical smiles as the hashcode
+        if (cdk == null)
+            cdk = new org.helm.chemtoolkit.cdk.CDKManipulator();
+        
+        try {
+            return cdk.convertMolFile2SMILES(molfile);
+        }
+        catch(Exception e) {
+            return null;
+        }
+    }
+    
+    JSONObject UpdateHashcode() {
+        JSONObject ret = new JSONObject();
+        long[] list = db.SelectList("select ID from HELMMonomers");
+        for (int i = 0; i < list.length; ++i)
+        {
+            String molfile = db.SelectString("select Molfile from HelmMonomers where ID=" + list[i]);
+            String hashcode = CalcHashcode(molfile);
+            Map<String, String> data = new HashMap<>();
+            data.put("hashcode", hashcode);
+            db.SaveRecord("HELMMonomers", list[i], data);
+        }
+        ret.put("msg", list.length + " updated");
+        return ret;
     }
     
     Map<String, String> SelectData(Map<String, String> items, String[] keys) {
@@ -391,14 +438,15 @@ public class AjaxTool {
         
         JSONObject ret = new JSONObject();
         try {
-            org.helm.chemtoolkit.cdk.CDKManipulator m = new org.helm.chemtoolkit.cdk.CDKManipulator();
+            if (cdk == null)
+                cdk = new org.helm.chemtoolkit.cdk.CDKManipulator();
             String molfile = null;
             if (inputformat != null && (inputformat.equals("mol") || inputformat.equals("molfile"))) {
-                String smiles = m.convert(q, AbstractChemistryManipulator.StType.MOLFILE);
-                molfile = m.convert(smiles, AbstractChemistryManipulator.StType.SMILES);
+                String smiles = cdk.convert(q, AbstractChemistryManipulator.StType.MOLFILE);
+                molfile = cdk.convert(smiles, AbstractChemistryManipulator.StType.SMILES);
             }
             else {
-                molfile = m.convert(q, AbstractChemistryManipulator.StType.SMILES);
+                molfile = cdk.convert(q, AbstractChemistryManipulator.StType.SMILES);
             }
             ret.put("output", molfile);
         } catch (Exception e) {

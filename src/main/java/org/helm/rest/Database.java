@@ -226,6 +226,37 @@ public class Database {
         return 0;
     }
     
+    public long[] SelectList(String sql) {
+        List<Long> list = new ArrayList();
+        try {
+            stmt = conn.createStatement();
+            rs = stmt.executeQuery(sql);
+            while (rs.next())
+                list.add(rs.getLong(1));
+        }
+        catch (Exception e) {
+            error = e;
+        }    
+        
+        long[] ret = new long[list.size()];
+        for (int i = 0; i < ret.length; ++i)
+            ret[i] = list.get(i);
+        return ret;
+    }
+    
+    public String SelectString(String sql) {
+        try {
+            stmt = conn.createStatement();
+            rs = stmt.executeQuery(sql);
+            if (rs.next())
+                return rs.getString(1);
+        }
+        catch (Exception e) {
+            error = e;
+        }    
+        return null;
+    }
+    
     public ArrayList<JSONObject> ReadAsJson(String sql) {
         try {
             stmt = conn.createStatement();
@@ -238,7 +269,7 @@ public class Database {
         return ResultSet2Json(rs);      
     }
     
-    public String ReadAsSDF(String sql, String molfile) {
+    public String ReadAsSDF(String sql, String molfilekey) {
         try {
             stmt = conn.createStatement();
             rs = stmt.executeQuery(sql);
@@ -249,19 +280,30 @@ public class Database {
         }    
              
         String lb = System.getProperty("line.separator");
-        molfile = molfile.toLowerCase();
+        molfilekey = molfilekey.toLowerCase();
         StringBuilder sb = new StringBuilder();
         try {
             ResultSetMetaData meta = rs.getMetaData();
             int n = meta.getColumnCount();
             while (rs.next()) {
-                String m = rs.getString(molfile);
+                String m = rs.getString(molfilekey);
+                if (m != null) {
+                    // the molfile from toolkit has extra $$$$ line
+                    // fix bug: https://github.com/PistoiaHELM/HELMWebEditor/issues/94
+                    int p = m.lastIndexOf("M  END") + 6;
+                    if (p > 6 && p < m.length() - 1)
+                        m = m.substring(0, p);
+                }
+                else {
+                    m = "   JSDraw203101711402D" + lb + lb + "  0  0  0  0  0  0              0 V2000" + lb + "M  END";
+                }
+                
                 sb.append(m);
                 sb.append(lb);
                 for (int i = 0; i < n; ++i) {
                     String k2 = meta.getColumnName(i + 1);
                     String k = k2.toLowerCase();
-                    if (k.equals(molfile))
+                    if (k.equals(molfilekey))
                         continue;
                     
                     sb.append("> <");
@@ -269,11 +311,12 @@ public class Database {
                     sb.append(">");
                     sb.append(lb);
                     
-                    sb.append(rs.getString(i + 1));
+                    String s = rs.getString(i + 1);
+                    sb.append(s == null ? "" : s);
                     sb.append(lb);
                     
                     sb.append(lb);
-                }                
+                }
                     
                 sb.append("$$$$");
                 sb.append(lb);                    

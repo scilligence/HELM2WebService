@@ -55,16 +55,15 @@ import javax.ws.rs.core.Context;
 import javax.ws.rs.core.MediaType;
 import javax.ws.rs.core.Response;
 import org.apache.commons.io.IOUtils;
-import org.apache.commons.lang.StringUtils;
 import org.helm.chemtoolkit.AbstractChemistryManipulator;
 import org.helm.notation2.*;
 import org.apache.commons.codec.binary.Base64;
 import org.apache.commons.lang.StringUtils;
-import com.mysql.jdbc.Connection;
+//import com.mysql.jdbc.Connection;
 
 @Path("/ajaxtool")
 public class AjaxTool {
-    Database db = null;
+    MongoDB db = null;
     static org.helm.chemtoolkit.cdk.CDKManipulator cdk = null;
     
     @GET
@@ -73,7 +72,7 @@ public class AjaxTool {
     @Produces({MediaType.TEXT_PLAIN, MediaType.APPLICATION_JSON})
     @Path("/get")
     public Response CmdGet(@Context HttpServletRequest request) {
-        db = new Database();
+        db = new MongoDB("mongodb://localhost:27017", "HELMDB");
         Response  ret = null;
         //if (!db.IsOpen()) {
         //    ret = Response.status(Response.Status.OK).entity(wrapAjaxError("ERROR: " + (db.error == null ? "" : db.error.getMessage()))).build();
@@ -97,7 +96,7 @@ public class AjaxTool {
     @Produces({MediaType.TEXT_PLAIN, MediaType.TEXT_HTML, MediaType.APPLICATION_JSON})
     @Path("/post")
     public Response CmdPost(@Context HttpServletRequest request) {
-        db = new Database();        
+        db = new MongoDB("mongodb://localhost:27017", "HELMDB");     
         Response ret = null;
         //if (!db.IsOpen()) {
         //    ret = Response.status(Response.Status.OK).entity(wrapAjaxError("ERROR: " + (db.error == null ? "" : db.error.getMessage()))).build();
@@ -131,7 +130,7 @@ public class AjaxTool {
             }
             
             case "helm.monomer.del":
-                ret = db.DelRecord("HelmMonomers", "ID=" + items.get("id"));
+                ret = db.DelRecord("HelmMonomers", Long.parseLong(items.get("id")));
                 break;
             case "helm.monomer.load":
                 ret = db.LoadMonomer(ToLong(items.get("id")));
@@ -157,11 +156,11 @@ public class AjaxTool {
             }
             break;
             case "helm.monomer.all": {
-                ret.put("monomers", db.ReadAsJson("select * from HelmMonomers"));
+                ret.put("monomers", db.ReadAsJson("HelmMonomers"));
             }            
             break;
             case "helm.monomer.json": {
-                ArrayList<JSONObject> ret2 = db.ReadAsJson("select * from HelmMonomers");
+                ArrayList<JSONObject> ret2 = db.ReadAsJson("HelmMonomers");
                 ret.put("monomers", ret2);
             }
             break;
@@ -173,7 +172,7 @@ public class AjaxTool {
                     ext = "json";
                 String contents;
                 if (ext.equals("json"))
-                    contents = db.ReadAsJson("select * from HelmMonomers").toString();
+                    contents = db.ReadAsJson("HelmMonomers").toString();
                 else
                     contents = db.ReadAsSDF("select * from HelmMonomers", "Molfile");
                 return Response
@@ -182,7 +181,7 @@ public class AjaxTool {
                         .build();
             }
             case "helm.monomer.downloadjson": {
-                ArrayList<JSONObject> ret2 = db.ReadAsJson("select * from HelmMonomers");
+                ArrayList<JSONObject> ret2 = db.ReadAsJson("HelmMonomers");
                 String s = "org.helm.webeditor.Monomers.loadDB(" + ret2.toString() + ");";
                 return Response.status(Response.Status.OK).entity(s).build();
             }
@@ -194,7 +193,7 @@ public class AjaxTool {
                 break;
 
             case "helm.rule.del":
-                ret = db.DelRecord("HelmRules", "ID=" + items.get("id"));
+                ret = db.DelRecord("HelmRules", Long.parseLong(items.get("id")));
                 break;
             case "helm.rule.load":
                 ret = db.LoadRule(ToLong(items.get("id")));
@@ -214,17 +213,17 @@ public class AjaxTool {
             }
             break;
             case "helm.rule.all": {
-                ret.put("rules", db.ReadAsJson("select * from HelmRules"));
+                ret.put("rules", db.ReadAsJson("HelmRules"));
             }
             break;
             case "helm.rule.downloadjson":
             case "helm.rules.downloadjson": {
-                ArrayList<JSONObject> ret2 = db.ReadAsJson("select * from HelmRules");
+                ArrayList<JSONObject> ret2 = db.ReadAsJson("HelmRules");
                 String s = "org.helm.webeditor.RuleSet.loadDB(" + ret2.toString() + ");";
                 return Response.status(Response.Status.OK).entity(s).build();
             }
             case "helm.rule.json": {
-                ArrayList<JSONObject> ret2 = db.ReadAsJson("select * from HelmRules");
+                ArrayList<JSONObject> ret2 = db.ReadAsJson("HelmRules");
                 ret.put("rules", ret2);
             }
             break;
@@ -270,14 +269,14 @@ public class AjaxTool {
     void CheckMonomerUniqueness(long id, Map<String, String> data) throws Exception {
         // check duplicated symbol
         String symbol = data.get("symbol");
-        long tid = db.SelectID("select ID from HelmMonomers where Symbol=" + Database.SqlSafe(symbol));
+        long tid = db.SelectID("HelmMonomers", "Symbol", symbol);
         if (tid > 0 && tid != id)
             throw new Exception("This symbol is used: " + symbol);
 
         // check duplicated structure
         String molfile = data.get("molfile");
         String hashcode = CalcHashcode(molfile);
-        tid = db.SelectID("select ID from HelmMonomers where Hashcode=" + Database.SqlSafe(hashcode));
+        tid = db.SelectID("HelmMonomers", "Hashcode", hashcode);
         if (tid > 0 && tid != id)
             throw new Exception("Duplicated structure: " + symbol);
         
@@ -300,10 +299,10 @@ public class AjaxTool {
     
     JSONObject UpdateHashcode() {
         JSONObject ret = new JSONObject();
-        long[] list = db.SelectList("select ID from HELMMonomers");
+        long[] list = db.SelectList("HELMMonomers", null, null);
         for (int i = 0; i < list.length; ++i)
         {
-            String molfile = db.SelectString("select Molfile from HelmMonomers where ID=" + list[i]);
+            String molfile = db.SelectString("HelmMonomers", "molfile", new org.bson.BsonDocument("id", new org.bson.BsonInt64(list[i])));
             String hashcode = CalcHashcode(molfile);
             Map<String, String> data = new HashMap<>();
             data.put("hashcode", hashcode);
@@ -390,8 +389,8 @@ public class AjaxTool {
     
     long saveMonomer(Monomer m) {
         String symbol = m.getAlternateId();
-        String sql = "select ID from HelmMonomers where upper(symbol)=" + Database.SqlSafe(symbol);
-        if (db.SelectID(sql) > 0)
+        //String sql = "select ID from HelmMonomers where upper(symbol)=" + Database.SqlSafe(symbol);
+        if (db.SelectID("HelmMonomers", "symbol", symbol) > 0)
             return 0;
         
         Map<String, String> ret = new HashMap();

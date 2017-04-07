@@ -174,7 +174,7 @@ public class AjaxTool {
                 if (ext.equals("json"))
                     contents = db.ReadAsJson("HelmMonomers").toString();
                 else
-                    contents = db.ReadAsSDF("select * from HelmMonomers", "Molfile");
+                    contents = db.ReadAsSDF("HelmMonomers", "Molfile");
                 return Response
                         .ok(contents, "application/unknown")
                         .header("content-disposition", "attachment;filename=Monomers." + ext)

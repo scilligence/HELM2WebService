@@ -56,8 +56,11 @@ public class MongoDB {
             q.append("id", new BsonInt64(id));
         if (category != null && category.length() > 0)
             q.append("category", new BsonString(category));
+        
+        BsonDocument sort = new BsonDocument();
+        sort.append("name", new BsonInt32(1));
 
-        return List("HelmRules", "ID,category,name,description,author,CreatedDate", q, page, countperpage);
+        return List("HelmRules", "ID,category,name,description,author,CreatedDate", q, sort, page, countperpage);
     }
     
     public JSONObject ListMonomers(int page, int countperpage, long id, String polymertype, String monomertype, String symbol) {
@@ -70,8 +73,11 @@ public class MongoDB {
             q.append("monomertype", new BsonString(monomertype));
         if (symbol != null && symbol.length() > 0)
             q.append("monomertype", new BsonString(symbol));
+        
+        BsonDocument sort = new BsonDocument();
+        sort.append("symbol", new BsonInt32(1));
 
-        return List("HelmMonomers", "ID, Symbol, Name, NaturalAnalog, PolymerType, MonomerType, Author, CreatedDate, Status, R1, R2, R3, R4, R5", q, page, countperpage);
+        return List("HelmMonomers", "ID, Symbol, Name, NaturalAnalog, PolymerType, MonomerType, Author, CreatedDate, Status, R1, R2, R3, R4, R5", q, sort, page, countperpage);
     }
     
     public JSONObject LoadRule(long id) {
@@ -96,7 +102,7 @@ public class MongoDB {
         return Result2Json(cur);
     }
     
-    public JSONObject List(String table, String cols, BsonDocument where, int page, int countperpage) {
+    public JSONObject List(String table, String cols, BsonDocument where, BsonDocument sortby, int page, int countperpage) {
         if (page < 1)
             page = 1;
         if (countperpage < 1)
@@ -113,6 +119,9 @@ public class MongoDB {
             count = coll.count(where);
             iter = coll.find(where);
         }
+        
+        if (sortby != null)
+            iter = iter.sort(sortby);
         
         if (cols != null) {
             String[] ss = cols.split(",");
@@ -147,7 +156,7 @@ public class MongoDB {
         BsonDocument where = new BsonDocument(key, new BsonString(value));
         Document fields = new Document("_id", false);
         fields.append("id", true);
-        MongoCursor cur = (where == null ? coll.find() : coll.find(where)).limit(1).projection(fields).iterator();        
+        MongoCursor cur = coll.find(where).limit(1).projection(fields).iterator();        
         if (cur == null || !cur.hasNext())
             return 0;
         
@@ -196,7 +205,7 @@ public class MongoDB {
     }
     
     public ArrayList<JSONObject> ReadAsJson(String table, String cols, BsonDocument where) {
-            FindIterable iter;
+        FindIterable iter;
         MongoCollection coll = db.getCollection(table);
         if (where == null) {
             iter = coll.find();
@@ -205,7 +214,7 @@ public class MongoDB {
             iter = coll.find(where);
         }
         
-        if (cols != null) {
+        if (iter != null) {
             String[] ss = cols.split(",");
             Document fields = new Document("_id", false);
             for (int i = 0; i < ss.length; ++i){
@@ -220,65 +229,59 @@ public class MongoDB {
         return ResultSet2Json(cur);
     }
     
-    public String ReadAsSDF(String sql, String molfilekey) {
-//        try {
-//            stmt = conn.createStatement();
-//            rs = stmt.executeQuery(sql);
-//        }
-//        catch (Exception e) {
-//            error = e;
-//            return null;
-//        }    
-//             
-//        String lb = System.getProperty("line.separator");
-//        molfilekey = molfilekey.toLowerCase();
-//        StringBuilder sb = new StringBuilder();
-//        try {
-//            ResultSetMetaData meta = rs.getMetaData();
-//            int n = meta.getColumnCount();
-//            while (rs.next()) {
-//                String m = rs.getString(molfilekey);
-//                if (m != null) {
-//                    // the molfile from toolkit has extra $$$$ line
-//                    // fix bug: https://github.com/PistoiaHELM/HELMWebEditor/issues/94
-//                    int p = m.lastIndexOf("M  END") + 6;
-//                    if (p > 6 && p < m.length() - 1)
-//                        m = m.substring(0, p);
-//                }
-//                else {
-//                    m = "   JSDraw203101711402D" + lb + lb + "  0  0  0  0  0  0              0 V2000" + lb + "M  END";
-//                }
-//                
-//                sb.append(m);
-//                sb.append(lb);
-//                for (int i = 0; i < n; ++i) {
-//                    String k2 = meta.getColumnName(i + 1);
-//                    String k = k2.toLowerCase();
-//                    if (k.equals(molfilekey))
-//                        continue;
-//                    
-//                    sb.append("> <");
-//                    sb.append(k2);
-//                    sb.append(">");
-//                    sb.append(lb);
-//                    
-//                    String s = rs.getString(i + 1);
-//                    sb.append(s == null ? "" : s);
-//                    sb.append(lb);
-//                    
-//                    sb.append(lb);
-//                }
-//                    
-//                sb.append("$$$$");
-//                sb.append(lb);                    
-//            }
-//        }
-//        catch (Exception e) {
-//            error = e;
-//            return null;
-//        }
-//        return sb.toString();
-           return null;
+    public String ReadAsSDF(String table, String molfilekey) {
+        MongoCollection coll = db.getCollection(table);
+        FindIterable iter = coll.find();
+             
+        String lb = System.getProperty("line.separator");
+        molfilekey = molfilekey.toLowerCase();
+        StringBuilder sb = new StringBuilder();
+        
+        if (iter == null) {
+            return null;
+        }
+        else {
+            Document fields = new Document("_id", false);
+            iter = iter.projection(fields);
+        }
+        
+        MongoCursor cur = iter.iterator();
+        while (cur.hasNext()) {
+            Document doc = (Document)cur.next();
+            String m = doc.getString(molfilekey);
+            if (m != null) {
+                // the molfile from toolkit has extra $$$$ line
+                // fix bug: https://github.com/PistoiaHELM/HELMWebEditor/issues/94
+                int p = m.lastIndexOf("M  END") + 6;
+                if (p > 6 && p < m.length() - 1)
+                    m = m.substring(0, p);
+            }
+            else {
+                m = lb + "   JSDraw203101711402D" + lb + lb + "  0  0  0  0  0  0              0 V2000" + lb + "M  END";
+            }
+            sb.append(m);
+            sb.append(lb);     
+            
+            for (String k : doc.keySet()) {
+                if (k.equals(molfilekey) || k.equals("_id"))
+                    continue;
+
+                sb.append("> <");
+                sb.append(k);
+                sb.append(">");
+                sb.append(lb);
+
+                String s = doc.get(k) + "";
+                sb.append(s == null ? "" : s);
+                sb.append(lb);
+
+                sb.append(lb);
+            }
+            sb.append("$$$$");
+            sb.append(lb);              
+        }
+
+        return sb.toString();
     }
     
     ArrayList<JSONObject> ResultSet2Json(MongoCursor rs) { 

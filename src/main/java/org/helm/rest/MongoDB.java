@@ -214,7 +214,7 @@ public class MongoDB {
             iter = coll.find(where);
         }
         
-        if (iter != null) {
+        if (cols != null) {
             String[] ss = cols.split(",");
             Document fields = new Document("_id", false);
             for (int i = 0; i < ss.length; ++i){

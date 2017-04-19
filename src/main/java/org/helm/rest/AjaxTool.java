@@ -285,6 +285,8 @@ public class AjaxTool {
     
     String CalcHashcode(String molfile)
     {
+        //org.helm.notation2.tools.SMILES.convertMolToSMILESWithAtomMapping(molfile, )
+        
         // this is one example implementation, using CDK canonical smiles as the hashcode
         if (cdk == null)
             cdk = new org.helm.chemtoolkit.cdk.CDKManipulator();

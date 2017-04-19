@@ -72,7 +72,7 @@ public class MongoDB {
         if (monomertype != null && monomertype.length() > 0)
             q.append("monomertype", new BsonString(monomertype));
         if (symbol != null && symbol.length() > 0)
-            q.append("monomertype", new BsonString(symbol));
+            q.append("symbol", new BsonString(symbol));
         
         BsonDocument sort = new BsonDocument();
         sort.append("symbol", new BsonInt32(1));
@@ -85,7 +85,14 @@ public class MongoDB {
         if (id > 0)
             q.append("id", new BsonInt64(id));
     
-        return LoadRow("HelmRules", q);
+        JSONObject ret = LoadRow("HelmRules", q);
+        if (ret.length() == 0) {
+            q = new BsonDocument();
+            if (id > 0)
+                q.append("id", new BsonString(id + ""));
+            ret = LoadRow("HelmRules", q);
+        }        
+        return ret;
     }
     
     public JSONObject LoadMonomer(long id) {
@@ -93,7 +100,14 @@ public class MongoDB {
         if (id > 0)
             q.append("id", new BsonInt64(id));
 
-        return LoadRow("HelmMonomers", q);
+        JSONObject ret = LoadRow("HelmMonomers", q);
+        if (ret.length() == 0) {
+            q = new BsonDocument();
+            if (id > 0)
+                q.append("id", new BsonString(id + ""));
+            ret = LoadRow("HelmMonomers", q);
+        }        
+        return ret;
     }
     
     public JSONObject LoadRow(String table, BsonDocument where) {
@@ -351,18 +365,22 @@ public class MongoDB {
     public long SaveRecord(String table, long id, Map<String, String> data) {
         MongoCollection coll = db.getCollection(table);
         
-        Document doc = new Document();
+        BsonDocument doc = new BsonDocument();
         for (String k : data.keySet()) {
-            doc.append(k, data.get(k));
+            String v = data.get(k);
+            if (v != null)
+                doc.append(k, new org.bson.BsonString(v));
+            else
+                doc.append(k, new org.bson.BsonNull());
         }
         
         if (id > 0) {
-            Document where = new Document("id", id);
-            coll.findOneAndUpdate(where, new Document("$set", doc));
+            BsonDocument where = new BsonDocument("id", new BsonInt64(id));
+            coll.findOneAndUpdate(where, new BsonDocument("$set", doc));
         }
         else {
             id = GetMaxID(table) + 1;
-            doc.append("id", id);
+            doc.append("id", new BsonInt64(id));
             coll.insertOne(doc);
         }
 

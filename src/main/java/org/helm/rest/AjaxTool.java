@@ -137,7 +137,12 @@ public class AjaxTool {
                 break;
             case "helm.monomer.save": {
                 Map<String, String> data = SelectData(items, "id,symbol,name,naturalanalog,molfile,smiles,polymertype,monomertype,r1,r2,r3,r4,r5,author".split(","));
-                long id = ToLong(data.get("id"));
+                long id = 0;
+                if (data.containsKey("id")) {
+                    id = ToLong(data.get("id"));
+                    data.remove("id");
+                }
+                
                 CheckMonomerUniqueness(id, data);
                 id = db.SaveRecord("HelmMonomers", id, data);
                 if (id > 0)
@@ -200,7 +205,12 @@ public class AjaxTool {
                 break;
             case "helm.rule.save": {
                 Map<String, String> data = SelectData(items, "id,category,name,description,script,author".split(","));
-                long id = db.SaveRecord("HelmRules", ToLong(data.get("id")), data);
+                long id = 0;
+                if (data.containsKey("id")) {
+                    id = ToLong(data.get("id"));
+                    data.remove("id");
+                }
+                id = db.SaveRecord("HelmRules", id, data);
                 if (id > 0)
                     ret = db.ListRules(0, 0, id, null);
             }
@@ -269,6 +279,11 @@ public class AjaxTool {
     void CheckMonomerUniqueness(long id, Map<String, String> data) throws Exception {
         // check duplicated symbol
         String symbol = data.get("symbol");
+        if (symbol != null)
+            symbol = symbol.trim();
+        if (symbol == null || symbol.length() == 0)
+            throw new Exception("Symbol cannot be blank");
+        
         long tid = db.SelectID("HelmMonomers", "Symbol", symbol);
         if (tid > 0 && tid != id)
             throw new Exception("This symbol is used: " + symbol);
@@ -569,7 +584,7 @@ public class AjaxTool {
         }
     }
 
-    static long ToLong(String s) {
+    public static long ToLong(String s) {
         try {
             if (s == null || s.length() == 0) {
                 return 0;

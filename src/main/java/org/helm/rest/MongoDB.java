@@ -65,14 +65,18 @@ public class MongoDB {
     
     public JSONObject ListMonomers(int page, int countperpage, long id, String polymertype, String monomertype, String symbol) {
         BsonDocument q = new BsonDocument();
-        if (id > 0)
+        if (id > 0) {
             q.append("id", new BsonInt64(id));
-        if (polymertype != null && polymertype.length() > 0)
-            q.append("polymertype", new BsonString(polymertype));
-        if (monomertype != null && monomertype.length() > 0)
-            q.append("monomertype", new BsonString(monomertype));
-        if (symbol != null && symbol.length() > 0)
-            q.append("symbol", new BsonString(symbol));
+        }
+        else {
+            // case insensitive
+            if (symbol != null && symbol.length() > 0)
+                q = BsonDocument.parse("{$or: [{\"symbol\": {$regex: \"" + symbol.replace("\"", "\\\"") + "\", $options: \"i\"}},{\"name\": {$regex: \"" + symbol.replace("\"", "\\\"") + "\", $options: \"i\"}}]}");
+            if (polymertype != null && polymertype.length() > 0)
+                q.append("polymertype", new BsonString(polymertype));
+            if (monomertype != null && monomertype.length() > 0)
+                q.append("monomertype", new BsonString(monomertype));
+        }
         
         BsonDocument sort = new BsonDocument();
         sort.append("symbol", new BsonInt32(1));
@@ -83,31 +87,17 @@ public class MongoDB {
     public JSONObject LoadRule(long id) {
         BsonDocument q = new BsonDocument();
         if (id > 0)
-            q.append("id", new BsonInt64(id));
+            q = BsonDocument.parse("{\"$or\":[{\"id\":\"" + id + "\"},{\"id\":" + id + "}]}");
     
-        JSONObject ret = LoadRow("HelmRules", q);
-        if (ret.length() == 0) {
-            q = new BsonDocument();
-            if (id > 0)
-                q.append("id", new BsonString(id + ""));
-            ret = LoadRow("HelmRules", q);
-        }        
-        return ret;
+        return LoadRow("HelmRules", q);
     }
     
     public JSONObject LoadMonomer(long id) {
         BsonDocument q = new BsonDocument();
         if (id > 0)
-            q.append("id", new BsonInt64(id));
+            q = BsonDocument.parse("{\"$or\":[{\"id\":\"" + id + "\"},{\"id\":" + id + "}]}");
 
-        JSONObject ret = LoadRow("HelmMonomers", q);
-        if (ret.length() == 0) {
-            q = new BsonDocument();
-            if (id > 0)
-                q.append("id", new BsonString(id + ""));
-            ret = LoadRow("HelmMonomers", q);
-        }        
-        return ret;
+        return LoadRow("HelmMonomers", q);
     }
     
     public JSONObject LoadRow(String table, BsonDocument where) {
@@ -167,7 +157,7 @@ public class MongoDB {
         key = key.toLowerCase();
         
         MongoCollection coll = db.getCollection(table);
-        BsonDocument where = new BsonDocument(key, new BsonString(value));
+        BsonDocument where = BsonDocument.parse("{\"" + key + "\": {$regex: \"" + value.replace("\"", "\\\"") + "\", $options: \"i\"}}"); // case insensitive
         Document fields = new Document("_id", false);
         fields.append("id", true);
         MongoCursor cur = coll.find(where).limit(1).projection(fields).iterator();        
@@ -355,7 +345,7 @@ public class MongoDB {
             Object t = d.get("id");
             if (t == null)
                 continue;
-            long i = (long)t;
+            long i = AjaxTool.ToLong(t + "");
             if (i > id)
                 id = i;
         }
@@ -365,7 +355,7 @@ public class MongoDB {
     public long SaveRecord(String table, long id, Map<String, String> data) {
         MongoCollection coll = db.getCollection(table);
         
-        BsonDocument doc = new BsonDocument();
+        Document doc = new Document();
         for (String k : data.keySet()) {
             String v = data.get(k);
             if (v != null)
@@ -375,8 +365,8 @@ public class MongoDB {
         }
         
         if (id > 0) {
-            BsonDocument where = new BsonDocument("id", new BsonInt64(id));
-            coll.findOneAndUpdate(where, new BsonDocument("$set", doc));
+            Document where = new Document("id", new BsonInt64(id));
+            coll.findOneAndUpdate(where, new Document("$set", doc));
         }
         else {
             id = GetMaxID(table) + 1;

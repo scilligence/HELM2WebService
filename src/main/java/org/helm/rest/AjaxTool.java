@@ -36,6 +36,7 @@ import java.io.FileWriter;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
+import java.time.LocalTime;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
@@ -142,7 +143,9 @@ public class AjaxTool {
                     id = ToLong(data.get("id"));
                     data.remove("id");
                 }
-                
+                if (id == 0)
+                    data.put("createddate", new java.text.SimpleDateFormat("yyyy-MM-dd").format(new java.util.Date()));
+                 
                 CheckMonomerUniqueness(id, data);
                 id = db.SaveRecord("HelmMonomers", id, data);
                 if (id > 0)
@@ -210,6 +213,9 @@ public class AjaxTool {
                     id = ToLong(data.get("id"));
                     data.remove("id");
                 }
+                if (id == 0)
+                    data.put("createddate", new java.text.SimpleDateFormat("yyyy-MM-dd").format(new java.util.Date()));
+
                 id = db.SaveRecord("HelmRules", id, data);
                 if (id > 0)
                     ret = db.ListRules(0, 0, id, null);
@@ -418,6 +424,7 @@ public class AjaxTool {
         ret.put("smiles", m.getCanSMILES());
         ret.put("polymertype", m.getPolymerType());
         ret.put("monomertype", m.getMonomerType());
+        ret.put("createddate", new java.text.SimpleDateFormat("yyyy-MM-dd").format(new java.util.Date()));
         
         List<Attachment> al = m.getAttachmentList();
         List<String> l = new ArrayList();

@@ -145,7 +145,14 @@ public class AjaxTool {
                 }
                 if (id == 0)
                     data.put("createddate", new java.text.SimpleDateFormat("yyyy-MM-dd").format(new java.util.Date()));
-                 
+                
+                String molfile = data.get("molfile");
+                String smiles = CalcSmiles(molfile);
+                if (data.containsKey("smiles"))
+                    data.replace("smiles", smiles);
+                else
+                    data.put("smiles", smiles);
+                
                 CheckMonomerUniqueness(id, data);
                 id = db.SaveRecord("HelmMonomers", id, data);
                 if (id > 0)
@@ -305,6 +312,22 @@ public class AjaxTool {
     }
     
     String CalcHashcode(String molfile)
+    {
+        //org.helm.notation2.tools.SMILES.convertMolToSMILESWithAtomMapping(molfile, )
+        
+        // this is one example implementation, using CDK canonical smiles as the hashcode
+        if (cdk == null)
+            cdk = new org.helm.chemtoolkit.cdk.CDKManipulator();
+        
+        try {
+            return cdk.convertMolFile2SMILES(molfile);
+        }
+        catch(Exception e) {
+            return null;
+        }
+    }
+   
+    String CalcSmiles(String molfile)
     {
         //org.helm.notation2.tools.SMILES.convertMolToSMILESWithAtomMapping(molfile, )
         

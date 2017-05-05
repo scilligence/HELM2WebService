@@ -71,7 +71,7 @@ public class MongoDB {
         else {
             // case insensitive
             if (symbol != null && symbol.length() > 0)
-                q = BsonDocument.parse("{$or: [{\"symbol\": {$regex: \"" + symbol.replace("\"", "\\\"") + "\", $options: \"i\"}},{\"name\": {$regex: \"" + symbol.replace("\"", "\\\"") + "\", $options: \"i\"}}]}");
+                q = BsonDocument.parse("{$or: [{\"symbol\": {$regex: \"" + symbol.replace("\"", "\\\"") + "\", $options: \"i\"}},{\"name\": {$regex: \"^" + symbol.replace("\"", "\\\"") + "\", $options: \"i\"}}]}");
             if (polymertype != null && polymertype.length() > 0)
                 q.append("polymertype", new BsonString(polymertype));
             if (monomertype != null && monomertype.length() > 0)

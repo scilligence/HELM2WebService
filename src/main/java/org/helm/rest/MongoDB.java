@@ -323,6 +323,13 @@ public class MongoDB {
         return ret;
     }
     
+    public JSONObject DelAll(String table) {
+        BsonDocument where = new BsonDocument();
+        MongoCollection coll = db.getCollection(table);
+        coll.deleteMany(where);
+        return null;     
+    }
+    
     public JSONObject DelRecord(String table, long id) {
         BsonDocument where = new BsonDocument("id", new BsonInt64(id));
         MongoCollection coll = db.getCollection(table);

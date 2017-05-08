@@ -60,6 +60,8 @@ import org.helm.chemtoolkit.AbstractChemistryManipulator;
 import org.helm.notation2.*;
 import org.apache.commons.codec.binary.Base64;
 import org.apache.commons.lang.StringUtils;
+import org.bson.BsonArray;
+import org.bson.BsonDocument;
 //import com.mysql.jdbc.Connection;
 
 @Path("/ajaxtool")
@@ -130,6 +132,9 @@ public class AjaxTool {
                 return Response.status(Response.Status.OK).entity(s).build();
             }
             
+            case "helm.monomer.delall":
+                ret = db.DelAll("HelmMonomers");
+                break;
             case "helm.monomer.del":
                 ret = db.DelRecord("HelmMonomers", Long.parseLong(items.get("id")));
                 break;
@@ -206,6 +211,20 @@ public class AjaxTool {
             case "helm.monomer.updatehashcode":
                 ret = UpdateHashcode();
                 break;
+            case "helm.monomer.importfromurl": {
+                String url = items.get("url");
+                String contents = downloadString(url);
+                ret = ImportMonomers("m.json", contents);
+            }
+            break;
+            case "helm.monomer.uploadlib": {
+                Part part = request.getPart("file");
+                String filename = getFileName(part);
+                String contents = getValue(part);
+                ret = ImportMonomers(filename, contents);
+                String s = "<html><head></head><body><textarea>" + wrapAjaxResult(ret) + "</textarea></body></html>";
+                return Response.status(Response.Status.OK).entity(s).type("text/html").build();                
+            }
 
             case "helm.rule.del":
                 ret = db.DelRecord("HelmRules", Long.parseLong(items.get("id")));
@@ -289,6 +308,26 @@ public class AjaxTool {
         return Response.status(Response.Status.OK).entity(wrapAjaxResult(ret)).build();
     }
     
+    public static String downloadString(String url) {
+        try {
+            java.net.URL website = new java.net.URL(url);
+            java.net.URLConnection connection = website.openConnection();
+            BufferedReader in = new BufferedReader(new InputStreamReader(connection.getInputStream()));
+
+            StringBuilder response = new StringBuilder();
+            String inputLine;
+
+            while ((inputLine = in.readLine()) != null) 
+                response.append(inputLine);
+
+            in.close();
+            return response.toString();
+        }
+        catch (Exception e) {
+            return null;
+        }
+    }
+    
     void CheckMonomerUniqueness(long id, Map<String, String> data) throws Exception {
         // check duplicated symbol
         String symbol = data.get("symbol");
@@ -369,6 +408,63 @@ public class AjaxTool {
         return ret;
     }
     
+    public JSONObject ImportMonomers(String filename, String contents) {
+        if (filename == null || contents == null)
+            return null;
+            
+        int n = 0;
+        if (filename.endsWith(".json") || filename.endsWith(".js")) {
+            BsonDocument doc = BsonDocument.parse("{\"records\":" + contents + "}");
+            BsonArray list = doc.getArray("records");
+            for (int i = 0; i < list.size(); ++i) {
+                BsonDocument d = list.get(i).asDocument();
+                Monomer monomer = json2Monomer(d);
+                if (saveMonomer(monomer, getValue(d, "author"), getValue(d,"createddate", "createdDate")) > 0)
+                    ++n;
+            }
+        }
+        
+        JSONObject ret = new JSONObject();
+        ret.put("n", n);
+        return ret;
+    }
+    
+    String getValue(BsonDocument d, String key) {
+        return getValue(d, key, null);
+    }
+    
+    String getValue(BsonDocument d, String key1, String key2) {
+        org.bson.BsonString ret = null;
+        if (d.containsKey(key1))
+            ret = d.getString(key1);
+        else if (d.containsKey(key2))
+            ret = d.getString(key2);
+        return ret == null ? null : ret.getValue();
+    }
+    
+    Monomer json2Monomer(BsonDocument d) {
+        Monomer ret = new Monomer();
+        
+        // id,symbol,name,naturalanalog,molfile,smiles,polymertype,monomertype,r1,r2,r3,r4,r5,author
+        ret.setAlternateId(getValue(d,"symbol"));
+        ret.setName(getValue(d,"name"));
+        ret.setNaturalAnalog(getValue(d,"naturalanalog"));
+        ret.setMolfile(getValue(d,"molfile"));
+        ret.setPolymerType(getValue(d,"polymertype"));
+        ret.setMonomerType(getValue(d,"monomertype"));
+        //if (d.containsKey("author"))
+        //    ret.setAuthor(d.getString("author"));
+        
+        ret.setCanSMILES(getValue(d,"smiles", "canSMILES"));
+        
+        for (int i = 1; i <= 5; ++i) {
+            Attachment att = new Attachment("R" + i, getValue(d,"r" + i));
+            ret.addAttachment(att);
+        }
+
+        return ret;
+    }
+    
     JSONObject ImportFromToolkit() {
         int n = 0;
         try {
@@ -383,7 +479,7 @@ public class AjaxTool {
                 Set<String> monomerIds = monomers.keySet();
                 for (String monomerId : monomerIds) {
                     Monomer monomer = monomers.get(monomerId);
-                    if (saveMonomer(monomer) > 0)
+                    if (saveMonomer(monomer, null, null) > 0)
                         ++n;
                 }
             }
@@ -433,7 +529,10 @@ public class AjaxTool {
         return new String(decodedBytes);
     }
     
-    long saveMonomer(Monomer m) {
+    long saveMonomer(Monomer m, String author, String createddate) {
+        if (m == null)
+            return 0;
+        
         String symbol = m.getAlternateId();
         //String sql = "select ID from HelmMonomers where upper(symbol)=" + Database.SqlSafe(symbol);
         if (db.SelectID("HelmMonomers", "symbol", symbol) > 0)
@@ -447,7 +546,8 @@ public class AjaxTool {
         ret.put("smiles", m.getCanSMILES());
         ret.put("polymertype", m.getPolymerType());
         ret.put("monomertype", m.getMonomerType());
-        ret.put("createddate", new java.text.SimpleDateFormat("yyyy-MM-dd").format(new java.util.Date()));
+        ret.put("author", author);
+        ret.put("createddate", createddate == null || createddate.isEmpty() ? new java.text.SimpleDateFormat("yyyy-MM-dd").format(new java.util.Date()) : createddate);
         
         List<Attachment> al = m.getAttachmentList();
         List<String> l = new ArrayList();

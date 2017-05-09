@@ -157,6 +157,7 @@ public class AjaxTool {
                     data.replace("smiles", smiles);
                 else
                     data.put("smiles", smiles);
+                data.put("pk", data.get("symbol").toLowerCase());
                 
                 CheckMonomerUniqueness(id, data);
                 id = db.SaveRecord("HelmMonomers", id, data);
@@ -540,6 +541,7 @@ public class AjaxTool {
         
         Map<String, String> ret = new HashMap();
         ret.put("symbol", symbol);
+        ret.put("pk", symbol.toLowerCase());
         ret.put("name", m.getName());
         ret.put("naturalanalog", m.getNaturalAnalog());
         ret.put("molfile", m.getMolfile());

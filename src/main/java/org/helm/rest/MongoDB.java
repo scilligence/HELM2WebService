@@ -71,7 +71,7 @@ public class MongoDB {
         else {
             // case insensitive
             if (symbol != null && symbol.length() > 0)
-                q = BsonDocument.parse("{$or: [{\"symbol\": {$regex: \"" + symbol.replace("\"", "\\\"") + "\", $options: \"i\"}},{\"name\": {$regex: \"^" + symbol.replace("\"", "\\\"") + "\", $options: \"i\"}}]}");
+                q = BsonDocument.parse("{$or: [{\"symbol\": {$regex: \"^" + symbol.replace("\"", "\\\"") + "\", $options: \"i\"}},{\"name\": {$regex: \"^" + symbol.replace("\"", "\\\"") + "\", $options: \"i\"}}]}");
             if (polymertype != null && polymertype.length() > 0)
                 q.append("polymertype", new BsonString(polymertype));
             if (monomertype != null && monomertype.length() > 0)
@@ -79,7 +79,7 @@ public class MongoDB {
         }
         
         BsonDocument sort = new BsonDocument();
-        sort.append("symbol", new BsonInt32(1));
+        sort.append("pk", new BsonInt32(1));
 
         return List("HelmMonomers", "ID, Symbol, Name, NaturalAnalog, PolymerType, MonomerType, Author, CreatedDate, Status, R1, R2, R3, R4, R5", q, sort, page, countperpage);
     }
@@ -157,7 +157,7 @@ public class MongoDB {
         key = key.toLowerCase();
         
         MongoCollection coll = db.getCollection(table);
-        BsonDocument where = BsonDocument.parse("{\"" + key + "\": {$regex: \"" + value.replace("\"", "\\\"") + "\", $options: \"i\"}}"); // case insensitive
+        BsonDocument where = BsonDocument.parse("{\"" + key + "\": {$regex: \"^" + value.replace("\"", "\\\"") + "$\", $options: \"i\"}}"); // case insensitive
         Document fields = new Document("_id", false);
         fields.append("id", true);
         MongoCursor cur = coll.find(where).limit(1).projection(fields).iterator();        

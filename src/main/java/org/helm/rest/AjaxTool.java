@@ -337,14 +337,14 @@ public class AjaxTool {
         if (symbol == null || symbol.length() == 0)
             throw new Exception("Symbol cannot be blank");
         
-        long tid = db.SelectID("HelmMonomers", "Symbol", symbol);
+        long tid = db.SelectID("HelmMonomers", "Symbol", symbol, null, null);
         if (tid > 0 && tid != id)
             throw new Exception("This symbol is used: " + symbol);
 
         // check duplicated structure
         String molfile = data.get("molfile");
         String hashcode = CalcHashcode(molfile);
-        tid = db.SelectID("HelmMonomers", "Hashcode", hashcode);
+        tid = db.SelectID("HelmMonomers", "Hashcode", hashcode, null, null);
         if (tid > 0 && tid != id)
             throw new Exception("Duplicated structure: " + symbol);
         
@@ -536,7 +536,7 @@ public class AjaxTool {
         
         String symbol = m.getAlternateId();
         //String sql = "select ID from HelmMonomers where upper(symbol)=" + Database.SqlSafe(symbol);
-        if (db.SelectID("HelmMonomers", "symbol", symbol) > 0)
+        if (db.SelectID("HelmMonomers", "symbol", symbol, "polymertype", m.getPolymerType()) > 0)
             return 0;
         
         Map<String, String> ret = new HashMap();

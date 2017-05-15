@@ -1,0 +1,599 @@
+{
+  "swagger": "2.0",
+  "info": {
+    "description": "This is the documentation for HELM Web Editor RESTful web service",
+    "version": "1.0.0",
+    "title": "HELM Web Editor RESTful Web Service",
+    "license": {
+      "name": "Apache 2.0",
+      "url": "http://www.apache.org/licenses/LICENSE-2.0.html"
+    }
+  },
+  "host": "54.91.164.146",
+  "basePath": "/WebService/service/ajaxtool/",
+  "tags": [
+    {
+      "name": "pet",
+      "description": "Everything about your Pets",
+      "externalDocs": {
+        "description": "Find out more",
+        "url": "http://swagger.io"
+      }
+    },
+    {
+      "name": "store",
+      "description": "Access to Petstore orders"
+    },
+    {
+      "name": "user",
+      "description": "Operations about user",
+      "externalDocs": {
+        "description": "Find out more about our store",
+        "url": "http://swagger.io"
+      }
+    }
+  ],
+  "schemes": [ "http" ],
+  "paths": {
+    "/delete?cmd=helm.monomer.del": {
+      "delete": {
+        "tags": [ "Monomer" ],
+        "summary": "Delete a Monomer",
+        "produces": [ "text/plain" ],
+        "parameters": [
+          {
+            "in": "formData",
+            "name": "id",
+            "description": "Monomer Internal ID",
+            "required": true,
+            "type": "int64"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "successful operation"
+          }
+        }
+      }
+    },
+    "/get?cmd=helm.monomer.delall": {
+      "get": {
+        "tags": [ "Monomer" ],
+        "summary": "Delete all monomers in Monomer database",
+        "produces": [ "text/plain" ],
+        "responses": {
+          "200": {
+            "description": "successful operation"
+          }
+        }
+      }
+    },
+    "/get?cmd=helm.monomer.importfromurl": {
+      "get": {
+        "tags": [ "Monomer" ],
+        "summary": "Copy all monomers from another monomer database online",
+        "parameters": [
+          {
+            "in": "formData",
+            "name": "url",
+            "description": "The url of source database to be copied, e.g. https://ionis.monomer.org/",
+            "required": true,
+            "type": "string"
+          }
+        ],
+        "produces": [ "text/plain" ],
+        "responses": {
+          "200": {
+            "description": "successful operation"
+          }
+        }
+      }
+    },
+    "/get?cmd=helm.monomer.importfromtoolkit": {
+      "get": {
+        "tags": [ "Monomer" ],
+        "summary": "Import all monomers from toolkit into Monomer database",
+        "produces": [ "text/plain" ],
+        "responses": {
+          "200": {
+            "description": "successful operation"
+          }
+        }
+      }
+    },
+    "/get?cmd=helm.monomer.json": {
+      "get": {
+        "tags": [ "Monomer" ],
+        "summary": "Get all monomers in json format",
+        "produces": [ "text/plain" ],
+        "responses": {
+          "200": {
+            "description": "successful operation",
+            "schema": { "$ref": "#/definitions/Ret_Monomers" }
+          }
+        }
+      }
+    },
+    "/post?cmd=helm.monomer.list": {
+      "post": {
+        "tags": [ "Monomer" ],
+        "summary": "List Monomers",
+        "produces": [ "text/plain" ],
+        "parameters": [
+          {
+            "in": "formData",
+            "name": "id",
+            "description": "Monomer Internal ID",
+            "type": "int64"
+          },
+          {
+            "in": "formData",
+            "name": "symbol",
+            "description": "Monomer Symbol",
+            "type": "string"
+          },
+          {
+            "in": "formData",
+            "name": "monomertype",
+            "description": "Monomer Type",
+            "type": "string"
+          },
+          {
+            "in": "formData",
+            "name": "polymertype",
+            "description": "Polymer Type",
+            "type": "string"
+          },
+          {
+            "in": "formData",
+            "name": "page",
+            "description": "List Page Number",
+            "type": "int"
+          },
+          {
+            "in": "formData",
+            "name": "countperpage",
+            "description": "The listed record count per page",
+            "type": "int"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "successful operation",
+            "schema": { "$ref": "#/definitions/Ret_MonomerList" }
+          }
+        }
+      }
+    },
+    "/post?cmd=helm.monomer.load": {
+      "post": {
+        "tags": [ "Monomer" ],
+        "summary": "Load the detail of a Monomer",
+        "produces": [ "text/plain" ],
+        "parameters": [
+          {
+            "in": "formData",
+            "name": "id",
+            "description": "Monomer Internal ID",
+            "required": true,
+            "type": "int64"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "successful operation",
+            "schema": { "$ref": "#/definitions/Ret_Monomer" }
+          }
+        }
+      }
+    },
+    "/put?cmd=helm.monomer.save": {
+      "put": {
+        "tags": [ "Monomer" ],
+        "summary": "Save a Monomer",
+        "produces": [ "text/plain" ],
+        "parameters": [
+          {
+            "in": "formData",
+            "name": "id",
+            "description": "Monomer Internal ID",
+            "type": "int64"
+          },
+          {
+            "in": "formData",
+            "name": "symbol",
+            "description": "Monomer Symbol",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "in": "formData",
+            "name": "name",
+            "description": "Monomer Full Name",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "in": "formData",
+            "name": "monomertype",
+            "description": "Monomer Type",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "in": "formData",
+            "name": "polymertype",
+            "description": "Polyer Type",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "in": "formData",
+            "name": "molfile",
+            "description": "Monomer Structure Data in Molfile format",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "in": "formData",
+            "name": "smiles",
+            "description": "Monomer Structure Data in SMILES format",
+            "type": "int64"
+          },
+          {
+            "in": "formData",
+            "name": "r1",
+            "description": "The Cap of R1 Group",
+            "type": "string"
+          },
+          {
+            "in": "formData",
+            "name": "r2",
+            "description": "The Cap of R2 Group",
+            "type": "string"
+          },
+          {
+            "in": "formData",
+            "name": "r3",
+            "description": "The Cap of R3 Group",
+            "type": "string"
+          },
+          {
+            "in": "formData",
+            "name": "r4",
+            "description": "The Cap of R4 Group",
+            "type": "string"
+          },
+          {
+            "in": "formData",
+            "name": "r5",
+            "description": "The Cap of R5 Group",
+            "type": "string"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "successful operation",
+            "schema": { "$ref": "#/definitions/Ret_MonomerList" }
+          }
+        }
+      }
+    },
+
+    "/delete?cmd=helm.rule.del": {
+      "delete": {
+        "tags": [ "Rule" ],
+        "summary": "Delete a Rule",
+        "produces": [ "text/plain" ],
+        "parameters": [
+          {
+            "in": "formData",
+            "name": "id",
+            "description": "Rule Internal ID",
+            "required": true,
+            "type": "int64"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "successful operation"
+          }
+        }
+      }
+    },
+    "/get?cmd=helm.rule.json": {
+      "get": {
+        "tags": [ "Rule" ],
+        "summary": "Get all rules in json format",
+        "produces": [ "text/plain" ],
+        "responses": {
+          "200": {
+            "description": "successful operation",
+            "schema": { "$ref": "#/definitions/Ret_Rules" }
+          }
+        }
+      }
+    },
+    "/post?cmd=helm.rule.list": {
+      "post": {
+        "tags": [ "Rule" ],
+        "summary": "List Monomers",
+        "produces": [ "text/plain" ],
+        "parameters": [
+          {
+            "in": "formData",
+            "name": "id",
+            "description": "Rule Internal ID",
+            "type": "int64"
+          },
+          {
+            "in": "formData",
+            "name": "page",
+            "description": "List Page Number",
+            "type": "int"
+          },
+          {
+            "in": "formData",
+            "name": "countperpage",
+            "description": "The listed record count per page",
+            "type": "int"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "successful operation",
+            "schema": { "$ref": "#/definitions/Ret_MonomerList" }
+          }
+        }
+      }
+    },
+    "/post?cmd=helm.rule.load": {
+      "post": {
+        "tags": [ "Rule" ],
+        "summary": "Load the detail of a Rule",
+        "produces": [ "text/plain" ],
+        "parameters": [
+          {
+            "in": "formData",
+            "name": "id",
+            "description": "Rule Internal ID",
+            "required": true,
+            "type": "int64"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "successful operation",
+            "schema": { "$ref": "#/definitions/Ret_Rule" }
+          }
+        }
+      }
+    },
+    "/put?cmd=helm.rule.save": {
+      "put": {
+        "tags": [ "Rule" ],
+        "summary": "Save a Rule",
+        "produces": [ "text/plain" ],
+        "parameters": [
+          {
+            "in": "formData",
+            "name": "id",
+            "description": "Rule Internal ID",
+            "type": "int64"
+          },
+          {
+            "in": "formData",
+            "name": "category",
+            "description": "Rule Category",
+            "type": "string"
+          },
+          {
+            "in": "formData",
+            "name": "name",
+            "description": "Rule Display Name",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "in": "formData",
+            "name": "script",
+            "description": "Definition of the rule in JavaScript",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "in": "formData",
+            "name": "description",
+            "description": "A Description about the Rule",
+            "type": "string"
+          },
+          {
+            "in": "formData",
+            "name": "author",
+            "description": "Author",
+            "type": "string"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "successful operation",
+            "schema": { "$ref": "#/definitions/Ret_MonomerList" }
+          }
+        }
+      }
+    }
+  },
+  "definitions": {
+    "Ret_Monomers": {
+      "type": "object",
+      "properties": {
+        "succeed": { "type": "bool" },
+        "error": { "type": "string" },
+        "ret": {
+          "type": "object",
+          "properties": {
+            "monomers": {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "properties": {
+                  "symbol": { "type": "string" },
+                  "name": { "type": "string" },
+                  "naturalanalog": { "type": "string" },
+                  "monomertype": { "type": "string" },
+                  "polymertype": { "type": "string" },
+                  "molfile": { "type": "string" },
+                  "smiles": { "type": "string" },
+                  "r1": { "type": "string" },
+                  "r2": { "type": "string" },
+                  "r3": { "type": "string" },
+                  "r4": { "type": "string" },
+                  "r5": { "type": "string" },
+                  "author": { "type": "string" },
+                  "createddate": { "type": "date" }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "Ret_MonomerList": {
+      "type": "object",
+      "properties": {
+        "succeed": { "type": "bool" },
+        "error": { "type": "string" },
+        "ret": {
+          "type": "object",
+          "properties": {
+            "page": { "type": "int32" },
+            "pages": { "type": "int32" },
+            "rows": {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "properties": {
+                  "symbol": { "type": "string" },
+                  "name": { "type": "string" },
+                  "naturalanalog": { "type": "string" },
+                  "monomertype": { "type": "string" },
+                  "polymertype": { "type": "string" },
+                  "r1": { "type": "string" },
+                  "r2": { "type": "string" },
+                  "r3": { "type": "string" },
+                  "r4": { "type": "string" },
+                  "r5": { "type": "string" },
+                  "author": { "type": "string" },
+                  "createddate": { "type": "date" }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "Ret_Monomer": {
+      "type": "object",
+      "properties": {
+        "succeed": { "type": "bool" },
+        "error": { "type": "string" },
+        "ret": {
+          "type": "object",
+          "properties": {
+            "id": { "type": "int64" },
+            "symbol": { "type": "string" },
+            "name": { "type": "string" },
+            "naturalanalog": { "type": "string" },
+            "monomertype": { "type": "string" },
+            "polymertype": { "type": "string" },
+            "molfile": { "type": "string" },
+            "smiles": { "type": "string" },
+            "r1": { "type": "string" },
+            "r2": { "type": "string" },
+            "r3": { "type": "string" },
+            "r4": { "type": "string" },
+            "r5": { "type": "string" },
+            "author": { "type": "string" },
+            "createddate": { "type": "date" }
+          }
+        }
+      }
+    },
+
+    "Ret_Rules": {
+      "type": "object",
+      "properties": {
+        "succeed": { "type": "bool" },
+        "error": { "type": "string" },
+        "ret": {
+          "type": "object",
+          "properties": {
+            "monomers": {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "properties": {
+                  "id": { "type": "int64" },
+                  "category": { "type": "string" },
+                  "name": { "type": "string" },
+                  "description": { "type": "string" },
+                  "script": { "type": "string" },
+                  "author": { "type": "string" },
+                  "createddate": { "type": "date" }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "Ret_RuleList": {
+      "type": "object",
+      "properties": {
+        "succeed": { "type": "bool" },
+        "error": { "type": "string" },
+        "ret": {
+          "type": "object",
+          "properties": {
+            "page": { "type": "int32" },
+            "pages": { "type": "int32" },
+            "rows": {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "properties": {
+                  "id": { "type": "int64" },
+                  "category": { "type": "string" },
+                  "name": { "type": "string" },
+                  "description": { "type": "string" },
+                  "script": { "type": "string" },
+                  "author": { "type": "string" },
+                  "createddate": { "type": "date" }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "Ret_Rule": {
+      "type": "object",
+      "properties": {
+        "succeed": { "type": "bool" },
+        "error": { "type": "string" },
+        "ret": {
+          "type": "object",
+          "properties": {
+            "id": { "type": "int64" },
+            "category": { "type": "string" },
+            "name": { "type": "string" },
+            "description": { "type": "string" },
+            "script": { "type": "string" },
+            "author": { "type": "string" },
+            "createddate": { "type": "date" }
+          }
+        }
+      }
+    }
+  }
+}

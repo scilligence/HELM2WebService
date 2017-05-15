@@ -48,6 +48,8 @@ import java.util.logging.Logger;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.Part;
 import javax.ws.rs.Consumes;
+import javax.ws.rs.DELETE;
+import javax.ws.rs.PUT;
 import javax.ws.rs.GET;
 import javax.ws.rs.POST;
 import javax.ws.rs.Path;
@@ -116,6 +118,24 @@ public class AjaxTool {
         
         db.Close();
         return ret;
+    }
+    
+    @PUT
+    @Consumes({MediaType.APPLICATION_JSON, MediaType.APPLICATION_FORM_URLENCODED, MediaType.TEXT_HTML,
+        MediaType.TEXT_PLAIN, MediaType.MULTIPART_FORM_DATA})
+    @Produces({MediaType.TEXT_PLAIN, MediaType.TEXT_HTML, MediaType.APPLICATION_JSON})
+    @Path("/put")
+    public Response CmdPut(@Context HttpServletRequest request) {
+        return CmdPost(request);
+    }
+    
+    @DELETE
+    @Consumes({MediaType.APPLICATION_JSON, MediaType.APPLICATION_FORM_URLENCODED, MediaType.TEXT_HTML,
+        MediaType.TEXT_PLAIN, MediaType.MULTIPART_FORM_DATA})
+    @Produces({MediaType.TEXT_PLAIN, MediaType.TEXT_HTML, MediaType.APPLICATION_JSON})
+    @Path("/delete")
+    public Response CmdDelete(@Context HttpServletRequest request) {
+        return CmdPost(request);
     }
 
     Response OnCmd(String cmd, Map<String, String> items, HttpServletRequest request) throws Exception {
@@ -344,7 +364,7 @@ public class AjaxTool {
         // check duplicated structure
         String molfile = data.get("molfile");
         String hashcode = CalcHashcode(molfile);
-        tid = db.SelectID("HelmMonomers", "Hashcode", hashcode, null, null);
+        tid = hashcode == null || hashcode.isEmpty() ? 0 : db.SelectID("HelmMonomers", "Hashcode", hashcode, null, null);
         if (tid > 0 && tid != id)
             throw new Exception("Duplicated structure: " + symbol);
         
